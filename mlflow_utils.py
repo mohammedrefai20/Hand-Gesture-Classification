@@ -19,7 +19,7 @@ def set_experiment(experiment_name):
     """
     mlflow.set_experiment(experiment_name)
 
-def start_run(nested : bool,run_name: Optional[str] = None):
+def start_run(run_name: Optional[str] = None, nested : Optional[bool] = False):
     """
     Start an MLflow run.
     
