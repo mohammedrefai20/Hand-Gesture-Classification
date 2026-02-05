@@ -145,6 +145,4 @@ mu.log_artifacts(artifacts_dir)
 # =============================== 
 mu.end_run()
 
-print(f"\n✅ Grid Search Complete!")
-print(f"Best Parameters: {grid_svm.best_params_}")
-print(f"Test F1 Score: {f1:.4f}")
+print(f"\n Grid Search Complete!")
