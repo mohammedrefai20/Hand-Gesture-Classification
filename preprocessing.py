@@ -12,7 +12,7 @@ def preprcessing(filepath:str):
         cols = [f'{axis}{i}' for i in range(2, 22)]
         df[cols] = df[cols].sub(df[base_col], axis=0)
 
-    norm = np.sqrt(df['x12']**2 + df['y12']**2)
+    norm = np.sqrt(df['x13']**2 + df['y13']**2)
     norm = norm.replace(0, np.nan)
     X_col = [f'x{i}' for i in range(1, 22)]
     y_col = [f'y{i}' for i in range(1, 22)]
