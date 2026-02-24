@@ -1,0 +1,9 @@
+# Ignore MLflow artifacts (large models)
+mlartifacts/
+
+# Ignore all pickle model files
+*.pkl
+
+# Optional: ignore cache
+__pycache__/
+*.pyc
