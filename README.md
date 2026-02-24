@@ -1,151 +1,163 @@
-# Hand Gesture Classification with MLflow Tracking
+# Hand Gesture Classification (Research Branch)
 
-## 1. Project Overview
-This repository contains a complete classical machine learning workflow for hand gesture classification using landmark coordinates.
+## 1) Objective
+This repository implements a classical machine learning pipeline for **hand gesture classification** using hand-landmark coordinates, with complete experiment tracking in MLflow.
 
-The pipeline includes:
-- Centralized MLflow utility functions for experiment management, dataset/model logging, and run organization.
-- A preprocessing module that normalizes hand landmarks and returns feature matrix `X` and labels `y`.
-- Four model training workflows:
-  - Support Vector Machine (SVM)
-  - K-Nearest Neighbors (KNN)
-  - Random Forest
-  - AdaBoost
-- Hyperparameter optimization using `GridSearchCV` with weighted F1 score as the objective.
-- Full experiment tracking in MLflow (parameters, metrics, artifacts, and logged models).
+The workflow covers:
+- Data preprocessing (`X`, `y` generation from a CSV file).
+- Training and tuning of multiple models (SVM, KNN, Random Forest, AdaBoost).
+- Experiment/run logging (dataset, parameters, metrics, model, artifacts).
+- Model comparison and final model registration in MLflow Model Registry.
 
-## 2. Repository Structure
+---
+
+## 2) Project Structure
 
 ```text
 .
-├── mlflow_utils.py      # Reusable MLflow helper functions
-├── preprocessing.py     # Data loading + normalization -> X, y
-├── svm_train.py         # SVM training + grid search + MLflow logging
-├── knn_train.py         # KNN training + grid search + MLflow logging
-├── rf_train.py          # Random Forest training + grid search + MLflow logging
-├── adb_train.py         # AdaBoost training + grid search + MLflow logging
-└── mlartifacts/         # Exported MLflow artifacts and model descriptors
+├── mlflow_utils.py      # Centralized MLflow helper functions (separate script)
+├── preprocessing.py     # CSV preprocessing and normalization -> X, y
+├── svm_train.py         # SVM + GridSearchCV + MLflow logging
+├── knn_train.py         # KNN + GridSearchCV + MLflow logging
+├── rf_train.py          # Random Forest + GridSearchCV + MLflow logging
+├── adb_train.py         # AdaBoost + GridSearchCV + MLflow logging
+└── mlartifacts/         # Exported MLflow artifacts/model descriptors
 ```
 
-## 3. MLflow Utilities (`mlflow_utils.py`)
+---
 
-The `mlflow_utils.py` file provides reusable wrappers around common MLflow operations.
+## 3) MLflow Utility Module (Required Separate Script)
 
-### 3.1 Tracking and Experiment Control
+All reusable MLflow operations are centralized in `mlflow_utils.py`:
+
+### Tracking & Experiment Management
 - `set_tracking_uri(uri="http://127.0.0.1:5000/")`
-  - Sets the MLflow tracking server URI.
 - `set_experiment(experiment_name)`
-  - Creates/selects the target MLflow experiment.
 
-### 3.2 Run Lifecycle
+### Run Lifecycle
 - `start_run(run_name=None, nested=False)`
-  - Starts a run (supports nested child runs for grid search combinations).
 - `end_run()`
-  - Ends the active MLflow run.
 
-### 3.3 Logging Helpers
-- `log_params(params: dict)`
-  - Logs model hyperparameters.
-- `log_metrics(metrics: dict)`
-  - Logs evaluation metrics.
+### Logging APIs
 - `log_dataset(df, name, context)`
-  - Logs input datasets to MLflow with context (e.g., `train`, `test`).
-- `log_tags(tags: dict)`
-  - Adds tags to the active run.
-- `log_artifacts(filepath: str)`
-  - Logs artifact files/directories.
-- `log_sklearn_model(model, artifact_path: str)`
-  - Logs a scikit-learn model using the MLflow sklearn flavor.
+- `log_params(params)`
+- `log_metrics(metrics)`
+- `log_tags(tags)`
+- `log_sklearn_model(model, artifact_path)`
+- `log_artifacts(filepath)`
 
-## 4. Preprocessing (`preprocessing.py`)
+This satisfies the requirement to keep MLflow logic in a **separate Python file** and reuse it across training scripts.
 
-The preprocessing function is:
+---
+
+## 4) Preprocessing
+
+`preprocessing.py` exposes:
 
 - `preprcessing(filepath: str) -> (X, y)`
 
-### 4.1 What it does
-1. Reads hand landmarks from CSV.
-2. Translates all points by subtracting the base point `(x1, y1)` from landmarks `2..21`.
-3. Computes scale using `sqrt(x13^2 + y13^2)`.
-4. Normalizes all `x1..x21` and `y1..y21` coordinates by this scale.
-5. Returns:
-   - `X`: all normalized landmark features.
-   - `y`: `label` column.
+### Processing steps
+1. Read CSV input.
+2. Translate landmarks by subtracting base point (`x1`, `y1`) from points `2..21`.
+3. Compute normalization scale: `sqrt(x13^2 + y13^2)`.
+4. Normalize all coordinates (`x1..x21`, `y1..y21`) by that scale.
+5. Return:
+   - `X`: normalized landmark features.
+   - `y`: label column.
 
-This makes the representation more robust to translation and scale variation.
+---
 
-## 5. Training and Experiment Workflow
+## 5) Training, Logging, and Experiment Design
 
-Each training script follows the same structure:
-1. Load and preprocess dataset using `preprcessing(...)`.
-2. Configure MLflow (`set_tracking_uri`, `set_experiment`).
-3. Split data into train/test (80/20, `random_state=42`).
-4. Start parent run (model-level run).
-5. Log train and test datasets.
-6. Run `GridSearchCV` (`cv=3`, `scoring="f1_weighted"`, `n_jobs=-1`).
-7. For each hyperparameter combination:
-   - Start nested run.
-   - Log parameters + mean CV and train F1.
-   - End nested run.
-8. Log best parameters and best model artifact.
-9. Evaluate best model on test split and log `f1_score_test`.
-10. Save and log confusion matrix analysis figure.
+Training and logging occur in these scripts:
+- `svm_train.py`
+- `knn_train.py`
+- `rf_train.py`
+- `adb_train.py`
 
-## 6. Hyperparameter Search Spaces
+Each script performs:
+1. Load and preprocess the dataset.
+2. Set MLflow tracking URI and experiment.
+3. Split train/test (`test_size=0.2`, `random_state=42`).
+4. Start a **parent run** (per model family).
+5. Log datasets (`train`, `test`).
+6. Run `GridSearchCV` (`cv=3`, `scoring='f1_weighted'`, `n_jobs=-1`).
+7. Log each hyperparameter combination as a **nested run**.
+8. Log best params and best model artifact.
+9. Log test weighted F1 score.
+10. Log confusion-matrix artifact chart(s).
 
-### 6.1 SVM (`svm_train.py`)
+### Experiment and run names used
+- Experiment: `ML1_project`
+- Parent runs:
+  - `SVM_GridSearch`
+  - `KNN_GridSearch`
+  - `RandomForest_GridSearch`
+  - `AdaBoost_GridSearch`
+
+---
+
+## 6) Hyperparameter Search Space
+
+### SVM
 - `kernel`: `['rbf']`
 - `C`: `[100, 130, 150]`
 - `gamma`: `[0.01, 0.05, 0.1]`
 
-### 6.2 KNN (`knn_train.py`)
+### KNN
 - `n_neighbors`: `[3, 5, 7, 9, 11]`
 - `weights`: `['uniform', 'distance']`
 - `metric`: `['euclidean', 'manhattan']`
 
-### 6.3 Random Forest (`rf_train.py`)
+### Random Forest
 - `n_estimators`: `[100, 300, 400, 500, 600]`
 - `max_depth`: `[5, 7, 9, 11]`
 
-### 6.4 AdaBoost (`adb_train.py`)
+### AdaBoost
 - `estimator__max_depth`: `[3, 5, 7, 11]`
 - `n_estimators`: `[400, 500, 600]`
 - `learning_rate`: `[0.5, 0.7, 0.8, 0.9]`
 
-## 7. Model Comparison (Test F1)
+---
 
-The tracked `f1_score_test` values from the experiment comparison are:
+## 7) Model Comparison (Decision Support)
 
-| Model | Test Weighted F1 |
+### Comparison table (weighted F1 on test set)
+
+| Model | f1_score_test |
 |---|---:|
 | SVM (GridSearch) | 0.98 |
 | KNN (GridSearch) | 0.95 |
 | Random Forest (GridSearch) | 0.94 |
 | AdaBoost (GridSearch) | 0.98 |
 
-The best performing configuration is registered as **AdaBoost** and assigned alias **`ada_boost_model`**.
+### Selection rationale
+AdaBoost and SVM both achieved the highest reported test weighted F1 (`0.98`). The final registered model is **AdaBoostModel (Version 1)**, selected as the production candidate based on the experiment decision.
 
-## 8. Confusion Matrix Artifacts
+---
 
-The experiment logs confusion matrix analysis images for each model (counts, normalized matrix, and misclassified-only matrix):
+## 8) Representative Charts for Model Comparison
 
-### SVM
-![SVM confusion matrices](mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/svm_confusion_matrices.png)
+The following artifact charts are logged and used for model comparison and error analysis:
 
-### KNN
-![KNN confusion matrices](mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/knn_confusion_matrices.png)
+- SVM confusion matrices:  
+  `mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/svm_confusion_matrices.png`
+- KNN confusion matrices:  
+  `mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/knn_confusion_matrices.png`
+- Random Forest confusion matrices:  
+  `mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/rf_confusion_matrices.png`
+- AdaBoost confusion matrices:  
+  `mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/adaboost_confusion_matrices.png`
 
-### Random Forest
-![Random Forest confusion matrices](mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/rf_confusion_matrices.png)
+These charts complement the metric table and support the final model selection.
 
-### AdaBoost
-![AdaBoost confusion matrices](mlartifacts/3/936b99b319fe449c902f4f4d600210c7/artifacts/adaboost_confusion_matrices.png)
+---
 
-## 9. How to Run
+## 9) How to Run
 
-1. Start MLflow tracking server (or point to an existing URI).
-2. Update dataset path in each training script (currently a local absolute path).
-3. Run any training script:
+1. Start MLflow tracking server.
+2. Update dataset path in each training script (currently hardcoded absolute path).
+3. Run training scripts:
 
 ```bash
 python svm_train.py
@@ -154,6 +166,12 @@ python rf_train.py
 python adb_train.py
 ```
 
-## 10. Notes
-- Current scripts use a hardcoded dataset path. For production usage, pass the dataset path as a CLI argument or environment variable.
-- MLflow model descriptors are present in `mlartifacts/3/models`, while large serialized model binaries are intentionally not included due to there large sizes.
+---
+
+## 10) Model Registry
+
+Registered model details:
+- Model name: `AdaBoostModel`
+- Version: `1`
+- Selected model family: AdaBoost
+
