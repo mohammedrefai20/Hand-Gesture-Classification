@@ -156,5 +156,4 @@ python adb_train.py
 
 ## 10. Notes
 - Current scripts use a hardcoded dataset path. For production usage, pass the dataset path as a CLI argument or environment variable.
-- The preprocessing function name in code is `preprcessing` (spelling preserved from source implementation).
-- MLflow model descriptors are present in `mlartifacts/3/models`, while large serialized model binaries are intentionally not included.
+- MLflow model descriptors are present in `mlartifacts/3/models`, while large serialized model binaries are intentionally not included due to there large sizes.
